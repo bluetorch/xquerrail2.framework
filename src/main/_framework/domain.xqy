@@ -747,6 +747,28 @@ declare function domain:get-domain-model(
         else fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-names)
 };
 
+declare function domain:get-uber-model(
+  $model-name as xs:string+
+) as element(domain:model)+ {
+  let $domain := config:get-domain(config:default-application())
+  let $models := domain:get-model($model-name)
+  let $uber-model :=
+    <domain:model name="all">
+      <domain:directory></domain:directory>
+      {
+        $models ! element domain:container  {
+          ./(@name|@label),
+          for $a in  fn:distinct-values($models/@*/fn:node-name())
+          return ($models/@*[fn:node-name(.) eq $a])[1]
+        }
+     }
+    </domain:model>
+  return
+    if($models)
+    then element domain:domain { $domain/namespace::*, $domain/@*, $domain/domain:name, $domain/*[. except $domain/domain:model], $models, $uber-model } / domain:model
+    else fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-name)
+};
+
 declare %private function domain:find-model-by-name(
   $domain as element(domain:domain),
   $name as xs:string?
